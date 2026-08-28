@@ -1,5 +1,6 @@
 from meli_api.adapters.outbound.cache.null_cache import NullCache
 from meli_api.adapters.outbound.cache.redis_cache import RedisCache
+from meli_api.observability.metrics import CIRCUIT_BREAKER_STATE
 
 # Puerto casi con certeza sin nada escuchando: fuerza fallas de conexión
 # deterministas sin depender de si la máquina donde corren los tests tiene un
@@ -45,6 +46,18 @@ def test_circuit_breaker_opens_after_fail_max_consecutive_failures():
     # Con el breaker abierto, una llamada más no debería ni intentar la red
     # (pybreaker corta antes) y debe seguir comportándose como miss.
     assert cache.get("k3") is None
+
+
+def test_circuit_breaker_state_gauge_reflects_open_after_tripping():
+    cache = _unreachable_cache(fail_max=2)
+    gauge_value = lambda: CIRCUIT_BREAKER_STATE.labels(name="redis")._value.get()
+
+    assert gauge_value() == 0  # closed al construir
+
+    cache.get("k1")
+    cache.get("k2")
+
+    assert gauge_value() == 1  # open
 
 
 def test_null_cache_is_always_a_miss_and_reports_not_configured():

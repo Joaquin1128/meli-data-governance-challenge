@@ -6,6 +6,7 @@ import logging
 from meli_api.application.ports.cache import Cache
 from meli_api.application.ports.product_repository import ProductRepository
 from meli_api.domain.product import EnrichmentStatus, Product
+from meli_api.observability.metrics import record_cache_result
 
 logger = logging.getLogger("meli_api.cached_repository")
 
@@ -83,21 +84,29 @@ class CachedProductRepository:
     def _read_cached_product(self, key: str) -> Product | None:
         raw = self._cache.get(key)
         if raw is None:
+            record_cache_result("detail", hit=False)
             return None
         try:
-            return _product_from_dict(json.loads(raw))
+            product = _product_from_dict(json.loads(raw))
         except (ValueError, KeyError, TypeError) as exc:
             logger.warning("Valor de cache corrupto para %r, se ignora: %s", key, exc)
+            record_cache_result("detail", hit=False)
             return None
+        record_cache_result("detail", hit=True)
+        return product
 
     def _read_cached_page(self, key: str) -> tuple[list[Product], int] | None:
         raw = self._cache.get(key)
         if raw is None:
+            record_cache_result("list", hit=False)
             return None
         try:
             payload = json.loads(raw)
             items = [_product_from_dict(item) for item in payload["items"]]
-            return items, payload["total"]
+            page = (items, payload["total"])
         except (ValueError, KeyError, TypeError) as exc:
             logger.warning("Valor de cache corrupto para %r, se ignora: %s", key, exc)
+            record_cache_result("list", hit=False)
             return None
+        record_cache_result("list", hit=True)
+        return page

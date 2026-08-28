@@ -5,7 +5,26 @@ import redis
 from redis.backoff import NoBackoff
 from redis.retry import Retry
 
+from meli_api.observability.metrics import set_circuit_breaker_state
+
 logger = logging.getLogger("meli_api.redis_cache")
+
+
+class _BreakerStateMetricsListener(pybreaker.CircuitBreakerListener):
+    """Publica cada transición de estado del breaker como métrica Gauge, para
+    poder graficarlo/alertar en Prometheus (ver docs/architecture.md, sección 5)."""
+
+    def __init__(self, name: str):
+        self._name = name
+
+    def state_change(self, cb, old_state, new_state) -> None:
+        set_circuit_breaker_state(self._name, new_state.name)
+        logger.warning(
+            "Circuit breaker %r cambió de estado: %s -> %s",
+            self._name,
+            old_state.name if old_state else "n/a",
+            new_state.name,
+        )
 
 
 class RedisCache:
@@ -45,7 +64,9 @@ class RedisCache:
         self._breaker = pybreaker.CircuitBreaker(
             fail_max=breaker_fail_max,
             reset_timeout=breaker_reset_timeout_seconds,
+            listeners=[_BreakerStateMetricsListener("redis")],
         )
+        set_circuit_breaker_state("redis", self._breaker.current_state)
 
     def get(self, key: str) -> str | None:
         try:

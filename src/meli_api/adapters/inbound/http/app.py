@@ -1,12 +1,16 @@
 from fastapi import FastAPI
 
 from meli_api.adapters.inbound.http.error_handlers import register_error_handlers
-from meli_api.adapters.inbound.http.routers import health, products
+from meli_api.adapters.inbound.http.middleware import RequestObservabilityMiddleware
+from meli_api.adapters.inbound.http.routers import health, metrics, products
+from meli_api.observability.logging import configure_logging
 
 
 def create_app() -> FastAPI:
     """Factory de la app: nada de estado global a nivel módulo, para que los
     tests puedan crear instancias frescas e independientes."""
+    configure_logging()
+
     app = FastAPI(
         title="MELI Enriched Products API",
         description=(
@@ -16,8 +20,10 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
+    app.add_middleware(RequestObservabilityMiddleware)
     register_error_handlers(app)
     app.include_router(health.router)
+    app.include_router(metrics.router)
     app.include_router(products.router)
 
     return app
