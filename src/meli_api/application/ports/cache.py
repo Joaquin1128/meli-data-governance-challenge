@@ -14,3 +14,9 @@ class Cache(Protocol):
     def set(self, key: str, value: str, ttl_seconds: int) -> None: ...
 
     def invalidate(self, key: str) -> None: ...
+
+    def status(self) -> str:
+        """'ok' | 'unavailable' | 'not_configured'. Usado por /health; nunca por
+        los use cases (que solo hacen get/set/invalidate y tratan cualquier falla
+        como un simple cache-miss)."""
+        ...

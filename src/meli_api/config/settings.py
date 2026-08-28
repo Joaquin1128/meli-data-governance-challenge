@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -14,9 +15,15 @@ class Settings(BaseSettings):
 
     db_path: str = "meli_products.db"
 
-    # Se usan recién en la Parte 5 (cache Redis), ya declaradas para no tener que
-    # volver a tocar settings en esa parte.
-    redis_url: str = "redis://localhost:6379/0"
+    # "redis": cache-aside real, con circuit breaker si Redis se cae.
+    # "none": cache deshabilitado a propósito (NullCache) -- no confundir con
+    # Redis caído, que se maneja solo con el circuit breaker, sin cambiar esto.
+    cache_backend: Literal["redis", "none"] = "redis"
+    # "127.0.0.1" en vez de "localhost" a propósito: si Redis está caído, resolver
+    # "localhost" prueba primero ::1 (IPv6) y después 127.0.0.1, duplicando el
+    # timeout de conexión en cada intento fallido (se midió: ~2s en vez de ~1s
+    # por llamada). Con la IP literal se evita esa resolución dual.
+    redis_url: str = "redis://127.0.0.1:6379/0"
     cache_ttl_detail_seconds: int = 300
     cache_ttl_list_seconds: int = 60
     redis_breaker_fail_max: int = 5
