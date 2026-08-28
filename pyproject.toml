@@ -1,0 +1,15 @@
+[project]
+name = "meli-api"
+version = "0.1.0"
+description = "API RESTful de descripciones enriquecidas (Data Governance Challenge)"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
