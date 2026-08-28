@@ -4,3 +4,4 @@ pydantic-settings
 redis
 pybreaker
 prometheus-client
+slowapi

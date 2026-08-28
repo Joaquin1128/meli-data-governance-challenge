@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     redis_breaker_fail_max: int = 5
     redis_breaker_reset_timeout_seconds: int = 30
 
+    # Límite por IP para los endpoints de negocio (/products, /products/{id}).
+    # /health y /metrics quedan sin límite: los necesita el propio monitoreo.
+    # A esta escala de prototipo alcanza con un limitador en memoria por proceso;
+    # en múltiples instancias reales esto se resolvería en el API Gateway
+    # (ver docs/architecture.md, sección 6).
+    rate_limit_per_minute: int = 60
+
 
 @lru_cache
 def get_settings() -> Settings:

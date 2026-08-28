@@ -1,11 +1,12 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
 from meli_api.adapters.inbound.http.dependencies import (
     get_get_product_use_case,
     get_list_products_use_case,
 )
+from meli_api.adapters.inbound.http.rate_limit import default_rate_limit, limiter
 from meli_api.adapters.inbound.http.schemas import ProductListResponse, ProductResponse
 from meli_api.application.use_cases.get_product import GetProductById
 from meli_api.application.use_cases.list_products import DEFAULT_LIMIT, ListProducts
@@ -15,7 +16,9 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 
 @router.get("", response_model=ProductListResponse)
+@limiter.limit(default_rate_limit)
 def list_products(
+    request: Request,
     use_case: Annotated[ListProducts, Depends(get_list_products_use_case)],
     status: Annotated[
         EnrichmentStatus | None,
@@ -32,7 +35,9 @@ def list_products(
 
 
 @router.get("/{item_id}", response_model=ProductResponse)
+@limiter.limit(default_rate_limit)
 def get_product(
+    request: Request,
     item_id: str,
     use_case: Annotated[GetProductById, Depends(get_get_product_use_case)],
 ) -> ProductResponse:
