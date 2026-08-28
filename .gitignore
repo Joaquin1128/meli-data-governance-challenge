@@ -1,0 +1,14 @@
+# Entornos y credenciales
+.env
+*.db
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Datos generados
+data/*.db
+data/*.json
+!data/.gitkeep
+
+# Colab
+.colab/
