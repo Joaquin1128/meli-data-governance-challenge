@@ -32,7 +32,7 @@ resto del diseño está en [`docs/architecture.md`](docs/architecture.md).
 |---|---|
 | [`docs/informe.md`](docs/informe.md) | Informe del desafío: decisiones, desafíos encontrados, resultados de corridas reales del pipeline, e impacto del enriquecimiento en el sistema de recomendación. |
 | [`docs/architecture.md`](docs/architecture.md) | Arquitectura de la API: capas, puertos, estrategia de resiliencia y observabilidad, diseño pensado para escala, y diagramas UML. |
-| [Notebook en Colab](https://colab.research.google.com/github/OWNER/REPO/blob/main/notebooks/meli_enrichment_pipeline.ipynb) | Pipeline de extracción y enriquecimiento, ejecutable directo desde el repo. *(Reemplazar `OWNER/REPO` por el usuario y nombre reales del repositorio.)* |
+| [Notebook en Colab](https://colab.research.google.com/github/Joaquin1128/meli-data-governance-challenge/blob/main/notebooks/meli_enrichment_pipeline.ipynb) | Pipeline de extracción y enriquecimiento, ejecutable directo desde el repo. |
 
 ## Pipeline: extracción y enriquecimiento
 

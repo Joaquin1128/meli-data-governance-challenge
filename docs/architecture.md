@@ -76,31 +76,10 @@ meli-data-governance-challenge/
 ```
 
 **Regla de dependencias (hexagonal):** las flechas de dependencia siempre apuntan hacia
-adentro.
-
-```
-   ┌───────────────────────────────────────────────────────────┐
-   │  ADAPTERS (infraestructura, reemplazables)                 │
-   │                                                             │
-   │   inbound/http/routers  ──┐                 ┌── outbound/persistence/sqlite_repository │
-   │   (FastAPI, Pydantic)     │                 │   outbound/cache/redis_cache            │
-   │                           ▼                 ▲                                          │
-   │                    ┌───────────────────────────────┐                                   │
-   │                    │   APPLICATION (use cases)      │                                   │
-   │                    │   depende de PORTS, no de       │                                   │
-   │                    │   FastAPI/SQLite/Redis          │                                   │
-   │                    │   ports: ProductRepository,     │                                   │
-   │                    │          Cache                  │                                   │
-   │                    └───────────────┬─────────────────┘                                   │
-   │                                    ▼                                                      │
-   │                    ┌───────────────────────────────┐                                     │
-   │                    │   DOMAIN (entidades puras)     │                                     │
-   │                    │   Product, EnrichmentStatus     │                                     │
-   │                    │   sin imports de FastAPI/SQL/   │                                     │
-   │                    │   Redis/etc.                    │                                     │
-   │                    └───────────────────────────────┘                                     │
-   └───────────────────────────────────────────────────────────┘
-```
+adentro. Los adapters (inbound: FastAPI; outbound: SQLite, Redis) dependen de
+`application/` a través de los puertos; `application/` depende de `domain/`; `domain/`
+no depende de nada. Ver el diagrama de componentes en la sección 10.1 para la versión
+gráfica de esta regla.
 
 Consecuencia práctica: para cambiar SQLite por Postgres, se escribe un nuevo
 `PostgresProductRepository` que implemente el mismo `Port` — nada en `domain/` ni
@@ -285,13 +264,13 @@ primera vista.
 Se implementa en partes chicas; cada parte se avisa cuando está lista para revisar, y los
 commits los hace el usuario manualmente (no se commitea desde el agente).
 
-1. ✅ Estructura base del proyecto + capa de dominio (`domain/`) + puertos (`application/ports/`).
-2. ✅ Casos de uso (`application/use_cases/`) sobre los puertos, con tests unitarios (ports mockeados).
-3. ✅ Adapter de persistencia SQLite (`adapters/outbound/persistence/`) + tests de integración.
-4. ✅ Adapter HTTP (FastAPI): routers, schemas, error handlers, wiring de dependencias.
-5. ✅ Adapter de cache Redis (cache-aside + circuit breaker) + `NullCache` de fallback.
-6. ✅ Observabilidad: logging estructurado, métricas Prometheus, `/health`.
-7. ✅ Rate limiting (slowapi) + revisión final / README de la API.
+1. Estructura base del proyecto + capa de dominio (`domain/`) + puertos (`application/ports/`).
+2. Casos de uso (`application/use_cases/`) sobre los puertos, con tests unitarios (ports mockeados).
+3. Adapter de persistencia SQLite (`adapters/outbound/persistence/`) + tests de integración.
+4. Adapter HTTP (FastAPI): routers, schemas, error handlers, wiring de dependencias.
+5. Adapter de cache Redis (cache-aside + circuit breaker) + `NullCache` de fallback.
+6. Observabilidad: logging estructurado, métricas Prometheus, `/health`.
+7. Rate limiting (slowapi) + revisión final / README de la API.
 
 Rate limiting: `slowapi`, por IP (`get_remote_address`), `MELI_API_RATE_LIMIT_PER_MINUTE`
 (default 60/min) aplicado solo a `/products` y `/products/{item_id}` -- `/health` y
