@@ -19,7 +19,7 @@ este proyecto responden explícitamente a esos tres pilares:
 | Pilar | Cómo lo aborda esta solución |
 |---|---|
 | **Discoverabilidad** | La API expone un contrato único y documentado (`GET /products`, `GET /products/{id}`, OpenAPI en `/docs`) para que cualquier equipo -- el sistema de recomendación, un comparador de ítems, u otro consumidor no previsto hoy -- encuentre y entienda los datos enriquecidos sin tener que conocer el pipeline interno ni el esquema de SQLite. `enrichment_status` hace visible, por cada producto, si el dato que se está consumiendo es enriquecido o no, en vez de esconder esa distinción. |
-| **Integridad de los datos** | El prompt de enriquecimiento prohíbe explícitamente inventar atributos no presentes en las especificaciones u la descripción original (`notebooks/meli_enrichment_pipeline.ipynb`, sección 7); la API nunca oculta ni reemplaza silenciosamente un dato ausente (fallback explícito a `original_description`, nunca un campo vacío sin explicación); y el manejo de errores es descriptivo en vez de fallar en silencio (sección 3 de `docs/architecture.md`). |
+| **Integridad de los datos** | El prompt de enriquecimiento prohíbe explícitamente inventar atributos no presentes en las especificaciones u la descripción original (`notebooks/meli_enrichment_pipeline.ipynb`, sección 7); la API nunca oculta ni reemplaza silenciosamente un dato ausente (fallback explícito a `original_description`, nunca un campo vacío sin explicación); y el manejo de errores es descriptivo en vez de fallar en silencio (sección 4 de `docs/architecture.md`). |
 | **Eficiencia operativa** | El pipeline selecciona qué enriquecer con una regla simple y auditable (`needs_enrichment`: solo descripciones ausentes o cortas), para no gastar cuota de Gemini en ítems que ya están bien descriptos. La API cachea (Redis, cache-aside) las lecturas más frecuentes, y su arquitectura hexagonal permite escalar o reemplazar componentes (DB, cache, incluso el proveedor de LLM del pipeline) sin reescribir el sistema completo. |
 
 Esta tabla es la respuesta directa a "cómo se aborda el desafío de negocio" que el
@@ -75,30 +75,23 @@ enunciado dice que se evalúa por encima del código en sí.
   queda como la opción a adoptar si la política de reintentos creciera en
   complejidad (jitter, reintentos condicionales por tipo de error, etc.), no como
   un requisito de este alcance.
-- **Elección del modelo de Gemini (dos idas y vueltas, documentadas porque las
-  dos dejaron una lección concreta).**
-  1. Se arrancó con `gemini-flash-lite-latest` para economizar cuota (decisión de
-     eficiencia operativa, pilar 3), pero no seguía el límite de longitud del
-     prompt de forma consistente (ver 3.3: 33-52% de las descripciones excedían
-     los 400 caracteres según la corrida).
-  2. Se probó reforzar esto con un reintento a nivel de código cuando la
-     descripción excedía el límite -- pero eso triplicaba las llamadas a Gemini
-     por producto en los casos afectados, agotando la cuota real más rápido, no
-     más lento. Se revirtió (una descripción algo larga es preferible a gastar
-     cuota reintentando sin garantía de éxito), y se probó `gemini-flash-latest`
-     (la variante estándar, no lite) bajo la hipótesis de que seguiría
-     instrucciones de formato con más consistencia.
-  3. `gemini-flash-latest` devolvió `503 UNAVAILABLE` ("This model is currently
-     experiencing high demand") de forma sostenida durante una corrida real,
-     agotando los 3 reintentos con backoff exponencial (2s, 4s, 8s) para varios
-     productos consecutivos y dejándolos sin enriquecer (`status = error`). Es un
-     problema de disponibilidad del lado de Google, no del código del pipeline --
-     pero para los fines prácticos de completar el challenge, la disponibilidad
-     pesa más que una consistencia de formato marginalmente mejor. Se volvió a
-     `gemini-flash-lite-latest` (variante más chica, aparentemente con menor
-     contención en el momento de las pruebas), aceptando el problema conocido de
-     longitud/consistencia de estilo (documentado en 3.3) como trade-off
-     consciente frente a directamente no poder completar la corrida.
+- **Elección del modelo de Gemini.** Se evaluaron dos variantes: `gemini-flash-lite-latest`
+  y `gemini-flash-latest` (la estándar, no lite). Se optó por la primera por ser la
+  opción de menor costo dentro del alcance de este challenge -- consistente con el
+  pilar de eficiencia operativa (pilar 3). Se probó además reforzar el cumplimiento
+  del límite de longitud del prompt (400 caracteres) con un reintento a nivel de
+  código cuando la descripción lo superaba, pero se revirtió: triplicaba las
+  llamadas a Gemini por producto en los casos afectados, un costo peor que el
+  problema que buscaba resolver (una descripción algo más larga es preferible a
+  gastar cuota reintentando sin garantía de éxito). Queda documentado como
+  limitación conocida que `gemini-flash-lite-latest` no respeta el límite de
+  longitud del prompt de forma consistente (ver 3.3: entre 33% y 57% de las
+  descripciones excedieron los 400 caracteres según la corrida). **En un entorno de
+  producción, la elección de modelo no debería resolverse solo por costo:**
+  correspondería evaluar la calidad y consistencia de las respuestas de varios
+  modelos candidatos (de Gemini y potencialmente de otros proveedores) contra un
+  set de casos de prueba representativo, y decidir en base a ese análisis -- el
+  costo por token es un criterio más dentro de esa evaluación, no el único.
 
 ### 2.2 Decisión de diseño: la API es de solo lectura
 
@@ -134,8 +127,8 @@ ejercita la red):
 
 Los dos primeros (retry duplicado de `redis-py` y resolución dual de `localhost`)
 están documentados en detalle, con la causa raíz verificada, en
-`docs/architecture.md` (sección 8bis); el tercero (logging duplicado de uvicorn)
-en la sección 5 del mismo documento. Se dejan como ejemplo concreto de por qué
+`docs/architecture.md` (sección 9bis); el tercero (logging duplicado de uvicorn)
+en la sección 6 del mismo documento. Se dejan como ejemplo concreto de por qué
 "probarlo con un servidor real" es parte del proceso y no un paso opcional: ninguno
 de estos tres problemas se hubiera detectado con tests puramente unitarios o con
 `TestClient`, que no abre sockets reales.
@@ -145,10 +138,10 @@ de estos tres problemas se hubiera detectado con tests puramente unitarios o con
 - El rate limiter y el circuit breaker de Redis son **por proceso** (en memoria):
   con más de una instancia de la API corriendo, cada una lleva su propia cuenta. Es
   una limitación aceptada explícitamente para el prototipo y documentada en
-  `docs/architecture.md` (sección 6) junto con cómo se resolvería a escala real
+  `docs/architecture.md` (sección 7) junto con cómo se resolvería a escala real
   (gateway central, storage compartido).
 - La API no tiene autenticación en este prototipo (decisión tomada explícitamente,
-  ver `docs/architecture.md`, sección 6), documentada como pendiente para un
+  ver `docs/architecture.md`, sección 7), documentada como pendiente para un
   entorno real.
 
 ## 3. Resultados del caso de uso
@@ -358,23 +351,22 @@ pipeline -- son ajustes acotados al prompt y a la validación posterior a la
 llamada a Gemini, coherentes con la separación de responsabilidades ya descrita en
 la sección 2.2:
 
-1. **Probado y revertido dos veces (ver 2.1 para el detalle completo).** Primero
-   se implementó un reintento a nivel de código que volvía a pedir la generación
-   si `len(text) > 400`; se revirtió porque triplicaba las llamadas a Gemini y
-   agotaba la cuota más rápido, no más lento. Después se probó `gemini-flash-latest`
-   (variante estándar, sin ese reintento) esperando mejor cumplimiento del límite;
-   se revirtió también porque devolvió `503 UNAVAILABLE` de forma sostenida
-   ("high demand") y dejó productos sin enriquecer. Se volvió a
-   `gemini-flash-lite-latest`, aceptando el problema de longitud (documentado en
-   3.3) como trade-off consciente frente a la disponibilidad: hoy se acepta la
+1. **Probado y revertido (ver 2.1 para el detalle completo).** Se implementó un
+   reintento a nivel de código que volvía a pedir la generación si
+   `len(text) > 400`; se revirtió porque triplicaba las llamadas a Gemini por
+   producto en los casos afectados, un costo peor que el problema que buscaba
+   resolver. Con el modelo elegido (`gemini-flash-lite-latest`), el límite de
+   longitud del prompt sigue sin cumplirse de forma confiable: hoy se acepta la
    longitud que devuelva el modelo en el primer intento exitoso, sin reintentar
    por eso. La Corrida 3 confirma que el problema no es monótono: el porcentaje de
    excesos subió a 57% (peor que las Corridas 1 y 2, ver 3.3) sin ningún cambio de
    prompt relacionado con longitud entre esas corridas -- es variabilidad propia
-   del modelo, no una regresión introducida. Sigue siendo la recomendación de más
-   largo plazo (para un entorno con cuota/infraestructura propia, no la de un
-   challenge): validar y truncar de forma segura si excede el límite, sin que esa
-   validación dispare llamadas adicionales al modelo.
+   del modelo, no una regresión introducida. La recomendación de más largo plazo
+   (para un entorno con cuota/infraestructura propia, no la de un challenge) tiene
+   dos partes: validar y truncar de forma segura si excede el límite sin que esa
+   validación dispare llamadas adicionales al modelo, y evaluar si otro modelo
+   candidato cumple el límite de forma más consistente antes de fijar uno solo por
+   costo (ver 2.1).
 2. **Aplicado y verificado con datos.** Se agregó al prompt una instrucción
    explícita de idioma ("Output language: Spanish [...] regardless of the fact
    these instructions are written in English"). La Corrida 1 (86% inglés / 14%
@@ -484,7 +476,7 @@ acá a nivel de este servicio puntual.
 ### 5.2 Qué falta para un consumo externo real (hoy documentado, no implementado)
 
 - **Autenticación y autorización.** El prototipo queda deliberadamente abierto (ver
-  `docs/architecture.md`, sección 6); un entorno real necesitaría API key u OAuth2
+  `docs/architecture.md`, sección 7); un entorno real necesitaría API key u OAuth2
   `client_credentials` gestionado centralmente, con cuotas por consumidor.
 - **Versionado del contrato.** Se decidió no versionar el path (`/products`, no
   `/v1/products`) para el prototipo; un consumidor externo real necesita garantías
@@ -495,6 +487,19 @@ acá a nivel de este servicio puntual.
   plano por IP; un ecosistema con 250+ equipos consumiendo la misma API necesita
   cuotas por API-key/cliente, típicamente en el API Gateway central, no en cada
   servicio.
+- **Escalado horizontal ante alto volumen de requests.** El enunciado enmarca el
+  desafío en un ecosistema de 250+ equipos y +15000 empleados (sección 1); una API
+  consumida a esa escala no puede depender de un único proceso, que es como corre
+  este prototipo hoy. La arquitectura ya está pensada para que ese salto sea
+  incremental y no una reescritura: al no guardar estado en memoria del proceso más
+  allá del rate limiter (limitación ya aceptada explícitamente, ver 2.4), agregar
+  réplicas *stateless* de la API detrás de un load balancer es la extensión
+  natural -- el estado que sí necesita compartirse entre réplicas (cache,
+  eventualmente cuotas) ya vive o debería vivir en Redis compartido, no en memoria
+  de cada instancia. El detalle de esta estrategia está en `docs/architecture.md`
+  (sección 7, fila "Horizontal scaling"); no se implementa en este prototipo
+  porque el volumen real que la justificaría está fuera del alcance de esta
+  entrega, no porque falte resolver algo en el diseño.
 - **Modo de consumo: pull vs. batch.** La API actual sirve bien un patrón de
   consulta puntual (un ítem, o una página filtrada) para un sistema que resuelve
   recomendaciones en el momento. Un consumidor que necesite el catálogo enriquecido
