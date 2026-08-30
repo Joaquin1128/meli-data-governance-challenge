@@ -22,7 +22,7 @@ El proyecto tiene dos componentes independientes:
    arquitectura hexagonal, cache-aside sobre Redis con circuit breaker, rate limiting,
    y observabilidad (logs estructurados, métricas Prometheus, health check).
 
-La API **no llama a MercadoLibre ni a Gemini en tiempo real** -- solo lee lo que el
+La API **no llama a MercadoLibre ni a Gemini en tiempo real**: solo lee lo que el
 pipeline offline ya dejó en `meli_products.db`. El detalle de esta decisión y del
 resto del diseño está en [`docs/architecture.md`](docs/architecture.md).
 
@@ -44,9 +44,9 @@ actualizarlo después de cada corrida, porque MercadoLibre lo rota en cada uso.
 
 Al terminar, el notebook deja dos artefactos:
 
-- `meli_products.db` -- SQLite con el detalle de cada producto y su
+- `meli_products.db`: SQLite con el detalle de cada producto y su
   `enrichment_status` (`pending` / `enriched` / `skipped` / `error`).
-- `enriched_products_export.json` -- snapshot desnormalizado del mismo contenido.
+- `enriched_products_export.json`: snapshot desnormalizado del mismo contenido.
 
 La API lee directamente de `meli_products.db`.
 

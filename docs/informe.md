@@ -1,4 +1,4 @@
-# Informe — Enriquecimiento de descripciones de productos y API RESTful
+# Informe: enriquecimiento de descripciones de productos y API RESTful
 
 > Data Governance: Desafío Técnico (Mercado Libre). Este informe complementa el
 > código (`notebooks/meli_enrichment_pipeline.ipynb`, `src/meli_api/`) y la
@@ -18,7 +18,7 @@ este proyecto responden explícitamente a esos tres pilares:
 
 | Pilar | Cómo lo aborda esta solución |
 |---|---|
-| **Discoverabilidad** | La API expone un contrato único y documentado (`GET /products`, `GET /products/{id}`, OpenAPI en `/docs`) para que cualquier equipo -- el sistema de recomendación, un comparador de ítems, u otro consumidor no previsto hoy -- encuentre y entienda los datos enriquecidos sin tener que conocer el pipeline interno ni el esquema de SQLite. `enrichment_status` hace visible, por cada producto, si el dato que se está consumiendo es enriquecido o no, en vez de esconder esa distinción. |
+| **Discoverabilidad** | La API expone un contrato único y documentado (`GET /products`, `GET /products/{id}`, OpenAPI en `/docs`) para que cualquier equipo (el sistema de recomendación, un comparador de ítems, u otro consumidor no previsto hoy) encuentre y entienda los datos enriquecidos sin tener que conocer el pipeline interno ni el esquema de SQLite. `enrichment_status` hace visible, por cada producto, si el dato que se está consumiendo es enriquecido o no, en vez de esconder esa distinción. |
 | **Integridad de los datos** | El prompt de enriquecimiento prohíbe explícitamente inventar atributos no presentes en las especificaciones u la descripción original (`notebooks/meli_enrichment_pipeline.ipynb`, sección 7); la API nunca oculta ni reemplaza silenciosamente un dato ausente (fallback explícito a `original_description`, nunca un campo vacío sin explicación); y el manejo de errores es descriptivo en vez de fallar en silencio (sección 4 de `docs/architecture.md`). |
 | **Eficiencia operativa** | El pipeline selecciona qué enriquecer con una regla simple y auditable (`needs_enrichment`: solo descripciones ausentes o cortas), para no gastar cuota de Gemini en ítems que ya están bien descriptos. La API cachea (Redis, cache-aside) las lecturas más frecuentes, y su arquitectura hexagonal permite escalar o reemplazar componentes (DB, cache, incluso el proveedor de LLM del pipeline) sin reescribir el sistema completo. |
 
@@ -31,7 +31,7 @@ enunciado dice que se evalúa por encima del código en sí.
 
 - **Autenticación de un solo uso.** El `refresh_token` de OAuth2 de MercadoLibre se
   invalida en cada uso y el servidor entrega uno nuevo (`notebooks/...`, sección 3b).
-  Esto obliga a persistir el token nuevo después de cada corrida -- un detalle fácil
+  Esto obliga a persistir el token nuevo después de cada corrida, un detalle fácil
   de pasar por alto que, si no se maneja, deja el pipeline inutilizable hasta repetir
   el login manual por navegador.
 - **Persistencia del token y de la base entre corridas: se evaluó automatizarla y se
@@ -41,7 +41,7 @@ enunciado dice que se evalúa por encima del código en sí.
   base para usarla con la API. Se descartó porque asume un entorno específico de
   quien corre el notebook (una cuenta de Drive propia, opcionalmente Drive Desktop
   sincronizado localmente para que la API la lea sin descarga manual) que un script
-  pensado para una evaluación acotada no debería requerir -- cambiaría una fricción
+  pensado para una evaluación acotada no debería requerir: cambiaría una fricción
   conocida (copiar el token, descargar un archivo chico, ambos ya documentados paso
   a paso en el README) por una dependencia nueva que podría no aplicar en el entorno
   de quien lo evalúa. Queda como mejora identificada para un uso personal recurrente
@@ -50,7 +50,7 @@ enunciado dice que se evalúa por encima del código en sí.
   `refresh_token` iría a un secret manager (no a un archivo), y la base pasaría de
   SQLite local a una base de datos en la nube (por ejemplo Postgres gestionado),
   para que el pipeline escriba y la API lea sin necesidad de mover un archivo entre
-  procesos -- es la extensión natural de la arquitectura de solo lectura ya descrita
+  procesos, es la extensión natural de la arquitectura de solo lectura ya descrita
   en 2.2, cambiando el adapter de persistencia sin tocar el resto del sistema.
 - **Selección de qué enriquecer.** En vez de enriquecer todo el catálogo extraído
   (lo que gastaría cuota de Gemini innecesariamente), se enriquece solo lo que tiene
@@ -77,7 +77,7 @@ enunciado dice que se evalúa por encima del código en sí.
   un requisito de este alcance.
 - **Elección del modelo de Gemini.** Se evaluaron dos variantes: `gemini-flash-lite-latest`
   y `gemini-flash-latest` (la estándar, no lite). Se optó por la primera por ser la
-  opción de menor costo dentro del alcance de este challenge -- consistente con el
+  opción de menor costo dentro del alcance de este challenge, consistente con el
   pilar de eficiencia operativa (pilar 3). Se probó además reforzar el cumplimiento
   del límite de longitud del prompt (400 caracteres) con un reintento a nivel de
   código cuando la descripción lo superaba, pero se revirtió: triplicaba las
@@ -90,7 +90,7 @@ enunciado dice que se evalúa por encima del código en sí.
   producción, la elección de modelo no debería resolverse solo por costo:**
   correspondería evaluar la calidad y consistencia de las respuestas de varios
   modelos candidatos (de Gemini y potencialmente de otros proveedores) contra un
-  set de casos de prueba representativo, y decidir en base a ese análisis -- el
+  set de casos de prueba representativo, y decidir en base a ese análisis: el
   costo por token es un criterio más dentro de esa evaluación, no el único.
 
 ### 2.2 Decisión de diseño: la API es de solo lectura
@@ -158,14 +158,14 @@ sobre una muestra ni sobre el JSON exportado):
   español, agregada a partir del hallazgo de la Corrida 1). Sobre el mismo
   catálogo (mismos 50 `item_id`, el listado de MELI para esta búsqueda no cambió
   entre corridas), sirve como verificación directa de que el fix funcionó.
-- **Corrida 3**: con las dos instrucciones agregadas después de la Corrida 2 --
-  variar la apertura de la descripción, y preferir el nombre del producto sobre
-  una especificación estructurada en conflicto (ver 3.4, puntos 3 y 4) -- ya
+- **Corrida 3**: con las dos instrucciones agregadas después de la Corrida 2
+  (variar la apertura de la descripción, y preferir el nombre del producto sobre
+  una especificación estructurada en conflicto, ver 3.4, puntos 3 y 4) ya
   aplicadas. Verifica el efecto de esos dos fixes sobre el mismo catálogo.
 
 Esta sección reporta las tres, porque el contraste entre corridas es en sí mismo el
 resultado más útil del análisis: muestra un hallazgo real, la corrección aplicada,
-y la verificación de que la corrección tuvo el efecto esperado -- no solo el
+y la verificación de que la corrección tuvo el efecto esperado, no solo el
 estado final.
 
 ### 3.1 Métricas generales (las tres corridas)
@@ -187,7 +187,7 @@ que valen para las tres corridas:
 - El umbral de selección (`needs_enrichment`, `MIN_DESCRIPTION_LENGTH = 60`)
   funcionó sin excepciones sobre los 50 productos: los 21 enriquecidos tenían
   `original_description` vacía (longitud 0, no simplemente corta) y los 29
-  omitidos tenían descripciones de 322 caracteres o más -- no hay ningún caso
+  omitidos tenían descripciones de 322 caracteres o más: no hay ningún caso
   límite ambiguo en esta búsqueda. Esto sugiere que, para "notebook gamer" en MLA,
   la población de productos está polarizada entre "sin descripción" y "con
   descripción larga ya cargada", más que distribuida en un rango intermedio.
@@ -195,7 +195,7 @@ que valen para las tres corridas:
   tres corridas.** `rating` es un campo esperado en `None` (el endpoint
   `/products/{id}` de MercadoLibre no lo expone, ya señalado como limitación
   conocida en el código: `notebooks/...`, sección 4). `price` depende de que
-  exista un `buy_box_winner` en la respuesta de MELI -- que ninguno de los 50
+  exista un `buy_box_winner` en la respuesta de MELI; que ninguno de los 50
   productos lo tuviera, de forma consistente entre corridas, sugiere que la
   búsqueda cae sobre fichas de catálogo sin oferta activa asociada, y sería el
   primer punto a investigar si se quisiera usar `price` como señal real en el
@@ -203,9 +203,9 @@ que valen para las tres corridas:
 
 ### 3.2 Ejemplos concretos de antes/después
 
-**Caso 1 -- enriquecimiento sin descripción original (el caso típico: 21/21).**
+**Caso 1: enriquecimiento sin descripción original (el caso típico: 21/21).**
 
-- Producto: `MLA23985848` -- "Notebook Gamer Asus 15,6'' I5 16gb 512gb Win11"
+- Producto: `MLA23985848`: "Notebook Gamer Asus 15,6'' I5 16gb 512gb Win11"
 - `original_description`: `""` (vacía)
 - `enriched_description` (Corrida 2, prompt corregido): *"Potencia tu rendimiento
   con la notebook gamer Asus Zephyrus de 15,6 pulgadas, equipada con un procesador
@@ -220,13 +220,13 @@ ahora tiene una descripción completa, correcta contra las especificaciones
 estructuradas del producto, de longitud/tono consistente, y en el idioma del
 resto del catálogo.
 
-**Caso 2 -- reconciliación entre el título del producto y una especificación que
+**Caso 2: reconciliación entre el título del producto y una especificación que
 parece errónea en el catálogo de origen (se mantiene igual en las tres corridas).**
 
-- Producto: `MLA23140641` -- "Notebook Gamer Lenovo Legion I7 8750h 1tb 8gb 15.6
+- Producto: `MLA23140641`: "Notebook Gamer Lenovo Legion I7 8750h 1tb 8gb 15.6
   Gtx1050"
 - Especificación estructurada extraída de MELI: `"Capacidad del disco rígido":
-  "1 GB"` -- un valor casi con certeza incorrecto en el catálogo de origen (una
+  "1 GB"`, un valor casi con certeza incorrecto en el catálogo de origen (una
   notebook gamer con disco rígido de 1 GB no es un producto real; el título del
   aviso dice "1tb").
 - `enriched_description` (Corrida 2 y 3, idéntico en ambas): *"...acompañada por
@@ -234,14 +234,14 @@ parece errónea en el catálogo de origen (se mantiene igual en las tres corrida
 
 El modelo generó la descripción usando `1 TB` (lo que dice el título del aviso, y
 lo que tiene sentido para el producto real) en vez de `1 GB` (lo que dice,
-erróneamente, el atributo estructurado) -- y lo hizo igual en las tres corridas.
+erróneamente, el atributo estructurado), y lo hizo igual en las tres corridas.
 En las Corridas 1 y 2 esto ocurrió **sin que el prompt lo indicara**: el prompt le
 pedía explícitamente "no inventar atributos fuera de las especificaciones o la
 descripción original", pero no aclaraba qué hacer si el *nombre* del producto
 contradice una especificación estructurada, y el modelo resolvió esa ambigüedad
 razonablemente por su cuenta. Para la Corrida 3 se agregó al prompt una
 instrucción explícita para este caso (preferir el nombre del producto cuando una
-especificación es claramente implausible, ver 3.4 punto 3) -- y el resultado no
+especificación es claramente implausible, ver 3.4 punto 3), y el resultado no
 cambió respecto a las corridas anteriores, lo cual es la verificación esperada:
 formalizar en el prompt un comportamiento que el modelo ya tenía no debería
 alterar el resultado, solo dejar de depender de que seguiera resolviéndolo bien
@@ -250,17 +250,17 @@ del desafío por dos motivos: primero, expone que el catálogo de origen de MELI
 puede tener errores de carga en atributos estructurados que un proceso automático
 no detectaría si solo mirara esos atributos; segundo, muestra que dejar esta
 regla implícita en las dos primeras corridas era un riesgo real aunque no se
-haya materializado -- la instrucción explícita de la Corrida 3 cierra ese
+haya materializado: la instrucción explícita de la Corrida 3 cierra ese
 comportamiento no especificado (ver 3.3 y 3.4, punto 3).
 
-**Caso 3 -- verificación del fix de idioma: mismo producto, dos corridas.**
+**Caso 3: verificación del fix de idioma: mismo producto, dos corridas.**
 
-- Producto: `MLA23241253` -- "Notebook Gamer Hp Omen / I7 / 16ram/ 512ssd/ Rtx2070
+- Producto: `MLA23241253`: "Notebook Gamer Hp Omen / I7 / 16ram/ 512ssd/ Rtx2070
   / 144hz"
 - Corrida 1 (prompt sin instrucción de idioma): *"Domina tus juegos y proyectos
   exigentes con la notebook HP Omen de 15.6 pulgadas, equipada con un potente
   procesador Intel Core i7 de 6 núcleos y 16 GB de RAM..."* (443 caracteres,
-  español -- por casualidad, no por instrucción)
+  español, por casualidad, no por instrucción)
 - Corrida 2 (prompt con instrucción explícita de español): *"Experimenta un
   rendimiento superior con la notebook gamer HP Omen 15-ek0007la en color negro.
   Equipada con un procesador Intel Core i7, 16 GB de RAM y almacenamiento SSD de
@@ -269,23 +269,23 @@ comportamiento no especificado (ver 3.3 y 3.4, punto 3).
 Y, más importante, el producto `MLA23985848` (Caso 1) que en la Corrida 1 había
 salido en **inglés** ("Elevate your gaming and productivity with the Asus
 Zephyrus...") en la Corrida 2 salió en **español** ("Potencia tu rendimiento
-con..."). El enunciado pide que "los prompts sean en inglés" -- una instrucción
+con..."). El enunciado pide que "los prompts sean en inglés": una instrucción
 sobre el *prompt* (las instrucciones que recibe el modelo), no sobre el idioma en
 el que debe responder. El prompt original nunca especificaba el idioma de la
 descripción generada, y el resultado en la Corrida 1 fue inconsistente: 18 de 21
 casos (86%) en inglés (siguiendo, por inercia, el idioma de las instrucciones) y 3
 de 21 (14%) en español. Para el mercado real de esta corrida (MLA, Argentina, con
 `name` y `specifications` ya en español), lo correcto de cara al negocio es que
-**toda** la descripción esté en español -- consistente con el resto de la ficha
+**toda** la descripción esté en español, consistente con el resto de la ficha
 del producto y con el idioma del consumidor final. Se agregó al prompt la
 instrucción explícita ("Output language: Spanish [...] regardless of the fact
 these instructions are written in English"), manteniendo las instrucciones en
 inglés como pide el enunciado. **Resultado verificado en la Corrida 2: 21 de 21
 (100%) en español, sin excepciones** (ver 3.3).
 
-**Caso 4 -- contraste con un producto omitido (`skipped`).**
+**Caso 4: contraste con un producto omitido (`skipped`).**
 
-- Producto: `MLA34198936` -- "Notebook Gamer Hp Victus 16-d0503la Color Azul"
+- Producto: `MLA34198936`: "Notebook Gamer Hp Victus 16-d0503la Color Azul"
 - `original_description` (sin tocar, 1046 caracteres): ya trae secciones con
   subtítulos ("Pantalla con gran impacto visual", "Eficiencia a tu alcance",
   "Potente disco sólido"...) redactadas por el vendedor o por MELI, con buena
@@ -293,7 +293,7 @@ inglés como pide el enunciado. **Resultado verificado en la Corrida 2: 21 de 21
 
 Este caso confirma que la regla de selección (`needs_enrichment`) está evitando
 correctamente gastar cuota de Gemini en un producto que ya tiene una descripción
-extensa y razonable -- es exactamente el comportamiento de eficiencia operativa
+extensa y razonable: es exactamente el comportamiento de eficiencia operativa
 que buscaba el diseño del pipeline (sección 2.1). Con el prompt corregido (Corridas
 2 y 3), esta descripción "buena" (español, con subtítulos) y las descripciones
 enriquecidas (español, en prosa corrida sin subtítulos) ya comparten idioma; la
@@ -306,11 +306,11 @@ le dio originalmente el vendedor o MELI, sin pasar por el enriquecimiento.
 | Observación | Corrida 1 (prompt original) | Corrida 2 (+ fix de idioma) | Corrida 3 (+ variar apertura, + preferir `name`) |
 |---|---|---|---|
 | Longitud de `enriched_description` | 347-463 caracteres, promedio 404 | 312-476 caracteres, promedio 383 | 361-483 caracteres, promedio 409 |
-| Excede el límite de 400 caracteres del prompt | 11 de 21 (52%) | 7 de 21 (33%) | **12 de 21 (57%)** -- empeoró, sin cambio de prompt que lo explique |
+| Excede el límite de 400 caracteres del prompt | 11 de 21 (52%) | 7 de 21 (33%) | **12 de 21 (57%)**: empeoró, sin cambio de prompt que lo explique |
 | Estructura de 2-3 oraciones | 21 de 21 (100%) | 21 de 21 (100%) | 21 de 21 (100%; 19 con 3, 2 con 2) |
 | Uso de markdown/bullets (prohibido) | 0 de 21 | 0 de 21 | 0 de 21 |
-| Idioma de salida | 18/21 inglés, 3/21 español (inconsistente) | 21 de 21 (100%) en español | **21 de 21 (100%) en español** -- fix se sostiene |
-| Repetición de apertura | 11/21 (52%) arrancan con "Elevate" | 11/21 (52%) arrancan con "Notebook" | **máx. 8/21 (38%) con "Equipada"** -- mejoró, no se eliminó |
+| Idioma de salida | 18/21 inglés, 3/21 español (inconsistente) | 21 de 21 (100%) en español | **21 de 21 (100%) en español**: fix se sostiene |
+| Repetición de apertura | 11/21 (52%) arrancan con "Elevate" | 11/21 (52%) arrancan con "Notebook" | **máx. 8/21 (38%) con "Equipada"**: mejoró, no se eliminó |
 | Uso de datos del título sobre una especificación estructurada | 2 de 21 casos | El mismo caso (`MLA23140641`, Caso 2) se repite igual | El mismo caso se repite una tercera vez, ahora con instrucción explícita en el prompt |
 
 Lectura de esta tabla, más allá de los números:
@@ -318,11 +318,11 @@ Lectura de esta tabla, más allá de los números:
 - **El fix de idioma funcionó exactamente como se esperaba y se sostiene en una
   tercera corrida: 100% de consistencia en las dos últimas corridas.** Esto es lo
   que respondía la pregunta original de este análisis ("¿deberían ser en español
-  las descripciones?") -- sí, y siguen siéndolo, de forma medible y estable.
+  las descripciones?"): sí, y siguen siéndolo, de forma medible y estable.
 - **El límite de longitud del prompt sigue sin cumplirse de forma confiable, y la
   Corrida 3 muestra que la variabilidad va en ambas direcciones, no solo hacia la
   mejora.** Bajó de 52% a 33% entre Corrida 1 y 2, pero subió a 57% en la Corrida
-  3 -- sin que ningún cambio de prompt entre 2 y 3 tocara la longitud. Esto
+  3, sin que ningún cambio de prompt entre 2 y 3 tocara la longitud. Esto
   refuerza (no contradice) la conclusión ya documentada: el modelo
   `gemini-flash-lite-latest` no respeta el límite de forma confiable corrida a
   corrida, y confiar en el prompt solo no alcanza. Un sistema que dependa de ese
@@ -333,13 +333,13 @@ Lectura de esta tabla, más allá de los números:
   apertura, pero no desapareció.** De un único término dominante en 52% de los
   casos (Corridas 1 y 2) bajó a un máximo de 38% ("Equipada") en la Corrida 3, con
   una segunda agrupación cercana ("Equipado", misma raíz). Es una mejora real y
-  medible, no ruido -- pero confirma que instruir "variar la apertura" atenúa sin
+  medible, no ruido, pero confirma que instruir "variar la apertura" atenúa sin
   eliminar la tendencia del modelo a converger en frases similares para productos
   de la misma categoría (riesgo de "uniformidad excesiva" anticipado en 4.3).
 - **La reconciliación entre `name` y una especificación estructurada errónea
   (Caso 2) es reproducible en las tres corridas**, incluida la Corrida 3 donde ya
   hay una instrucción explícita en el prompt para este caso. El resultado no
-  cambió respecto a cuando el comportamiento era implícito -- lo cual es la
+  cambió respecto a cuando el comportamiento era implícito: lo cual es la
   verificación esperada: la instrucción explícita no debía cambiar un resultado
   que el modelo ya acertaba, solo dejar de depender de que lo siguiera acertando
   sin que estuviera especificado (ver 3.4, punto 3).
@@ -347,7 +347,7 @@ Lectura de esta tabla, más allá de los números:
 ### 3.4 Qué se haría distinto con este resultado en mano
 
 Ninguno de estos hallazgos requiere cambiar la arquitectura de la API ni del
-pipeline -- son ajustes acotados al prompt y a la validación posterior a la
+pipeline: son ajustes acotados al prompt y a la validación posterior a la
 llamada a Gemini, coherentes con la separación de responsabilidades ya descrita en
 la sección 2.2:
 
@@ -360,7 +360,7 @@ la sección 2.2:
    longitud que devuelva el modelo en el primer intento exitoso, sin reintentar
    por eso. La Corrida 3 confirma que el problema no es monótono: el porcentaje de
    excesos subió a 57% (peor que las Corridas 1 y 2, ver 3.3) sin ningún cambio de
-   prompt relacionado con longitud entre esas corridas -- es variabilidad propia
+   prompt relacionado con longitud entre esas corridas: es variabilidad propia
    del modelo, no una regresión introducida. La recomendación de más largo plazo
    (para un entorno con cuota/infraestructura propia, no la de un challenge) tiene
    dos partes: validar y truncar de forma segura si excede el límite sin que esa
@@ -375,12 +375,12 @@ la sección 2.2:
 3. **Aplicado y verificado con datos.** Se aclaró en el prompt que, ante un
    conflicto entre el nombre del producto y una especificación estructurada
    claramente implausible, se prefiere el nombre (la especificación puede tener
-   errores de carga del catálogo de origen). El caso `MLA23140641` -- que ya se
-   había resuelto igual en las Corridas 1 y 2 sin esta instrucción -- dio el mismo
+   errores de carga del catálogo de origen). El caso `MLA23140641`, que ya se
+   había resuelto igual en las Corridas 1 y 2 sin esta instrucción, dio el mismo
    resultado en la Corrida 3 con la instrucción explícita: confirma que formalizar
    el comportamiento no lo alteró, y elimina la dependencia de que el modelo lo
    siguiera infiriendo bien por su cuenta.
-4. **Aplicado y parcialmente verificado con datos -- mejora real, no
+4. **Aplicado y parcialmente verificado con datos: mejora real, no
    resuelto del todo.** Se agregó al prompt la instrucción de variar la apertura
    de la descripción entre productos. En la Corrida 3, la repetición máxima de una
    misma palabra de apertura bajó de 52% (Corridas 1 y 2) a 38% ("Equipada"). Es
@@ -401,7 +401,7 @@ matching y filtrado. Ambas vías se degradan cuando la descripción de origen es
 
 - **Ausente o extremadamente corta**: el vendedor no cargó descripción, o cargó una
   línea genérica. Un embedding sobre texto vacío o casi vacío no aporta señal
-  distintiva -- el ítem queda mal representado en el espacio semántico, lo que en la
+  distintiva: el ítem queda mal representado en el espacio semántico, lo que en la
   práctica se traduce en recomendaciones pobres o en el "cold-start problem" a nivel
   de ítem (no de usuario): el sistema no tiene con qué compararlo contra el resto
   del catálogo hasta que acumule suficiente interacción de usuarios.
@@ -433,7 +433,7 @@ degradar, la calidad de las recomendaciones.
 - **Trazabilidad de la fuente del dato.** El campo `enrichment_status` (expuesto en
   la API) permite que el sistema de recomendación pondere de forma distinta una
   descripción enriquecida (`enriched`) de una original sin tocar (`skipped`,
-  `pending`) o de un fallback por falla (`error`) -- por ejemplo, dándole menor peso
+  `pending`) o de un fallback por falla (`error`), por ejemplo, dándole menor peso
   o marcándola para revisión, en vez de tratarlas como equivalentes.
 
 ### 4.3 Riesgos y cómo medir el impacto real
@@ -467,8 +467,8 @@ asumirlo:
 
 La API expone un contrato REST/JSON versionable, con especificación OpenAPI
 autogenerada por FastAPI (`/openapi.json`, documentación interactiva en `/docs`).
-Cualquier equipo externo -- el sistema de recomendación, un buscador, un dashboard
-de calidad de catálogo -- puede generar un cliente tipado a partir de ese schema sin
+Cualquier equipo externo (el sistema de recomendación, un buscador, un dashboard
+de calidad de catálogo) puede generar un cliente tipado a partir de ese schema sin
 coordinación manual con el equipo dueño de la API, que es exactamente el problema de
 discoverabilidad que plantea el enunciado a nivel de toda la organización, resuelto
 acá a nivel de este servicio puntual.
@@ -480,7 +480,7 @@ acá a nivel de este servicio puntual.
   `client_credentials` gestionado centralmente, con cuotas por consumidor.
 - **Versionado del contrato.** Se decidió no versionar el path (`/products`, no
   `/v1/products`) para el prototipo; un consumidor externo real necesita garantías
-  de que un cambio de contrato no rompe su integración sin aviso -- esto se resolvería
+  de que un cambio de contrato no rompe su integración sin aviso: esto se resolvería
   versionando el path o negociando por header, con una política de deprecación
   explícita.
 - **Cuotas diferenciadas por consumidor.** El rate limiting actual es un límite
@@ -494,7 +494,7 @@ acá a nivel de este servicio puntual.
   incremental y no una reescritura: al no guardar estado en memoria del proceso más
   allá del rate limiter (limitación ya aceptada explícitamente, ver 2.4), agregar
   réplicas *stateless* de la API detrás de un load balancer es la extensión
-  natural -- el estado que sí necesita compartirse entre réplicas (cache,
+  natural: el estado que sí necesita compartirse entre réplicas (cache,
   eventualmente cuotas) ya vive o debería vivir en Redis compartido, no en memoria
   de cada instancia. El detalle de esta estrategia está en `docs/architecture.md`
   (sección 7, fila "Horizontal scaling"); no se implementa en este prototipo
@@ -505,7 +505,7 @@ acá a nivel de este servicio puntual.
   recomendaciones en el momento. Un consumidor que necesite el catálogo enriquecido
   completo para (re)entrenar embeddings offline se beneficiaría de un endpoint de
   export masivo (o de leer directamente un snapshot/data lake), no de paginar
-  `GET /products` con `limit=100` miles de veces -- esto es una extensión natural, no
+  `GET /products` con `limit=100` miles de veces: esto es una extensión natural, no
   implementada, que valdría la pena evaluar según el consumidor real.
 
 ### 5.3 Gobernanza del dato consumido externamente
@@ -519,7 +519,7 @@ desafío. Dos decisiones ya tomadas en este proyecto apuntan directamente a eso:
   original del vendedor.
 - Los códigos de error son explícitos y diferenciados (`PRODUCT_NOT_FOUND`,
   `REPOSITORY_UNAVAILABLE`, `RATE_LIMIT_EXCEEDED`, etc., ver `README.md`), en vez de
-  un genérico "error" -- un requisito que el propio enunciado pide explícitamente
+  un genérico "error": un requisito que el propio enunciado pide explícitamente
   ("códigos de error descriptivos... para facilitar la identificación y resolución
   de problemas por parte de los usuarios que la consumen").
 
@@ -538,7 +538,7 @@ enriquecimiento automático sin comprometer la integridad del dato original, có
 mantener una API disponible cuando sus dependencias (cache, y en el caso general
 también los proveedores de IA/datos) no lo están, y cómo dejar un sistema
 descubrible y consumible por equipos que no participaron de su diseño. Las
-decisiones documentadas en este informe y en `docs/architecture.md` -- prompt con
+decisiones documentadas en este informe y en `docs/architecture.md` (prompt con
 restricciones verificables, API de solo lectura con degradación graceful,
-`enrichment_status` explícito, contrato OpenAPI autodescriptivo -- son la respuesta
+`enrichment_status` explícito, contrato OpenAPI autodescriptivo) son la respuesta
 concreta a esas tres tensiones dentro del alcance de este prototipo.

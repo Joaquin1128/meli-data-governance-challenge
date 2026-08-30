@@ -1,4 +1,4 @@
-# Arquitectura de la API RESTful — Descripciones Enriquecidas
+# Arquitectura de la API RESTful: descripciones enriquecidas
 
 > Documentación de la arquitectura implementada. Contexto de evaluación: simulación
 > del ecosistema de Mercado Libre (250+ equipos, escala de millones de requests),
@@ -73,7 +73,7 @@ meli-data-governance-challenge/
 │
 ├── tests/
 │   ├── conftest.py       # fixture compartida: SQLite temporal seedeada (seeded_db_path)
-│   ├── unit/              # domain, use cases y CachedProductRepository -- puertos con fakes, sin I/O
+│   ├── unit/              # domain, use cases y CachedProductRepository, puertos con fakes, sin I/O
 │   ├── integration/       # sqlite_repository y redis_cache contra instancias reales/temporales
 │   └── e2e/               # FastAPI TestClient, stack completo (trae su propio conftest.py)
 │
@@ -97,12 +97,12 @@ no depende de nada. Ver el diagrama de componentes en la sección 11.1 para la v
 gráfica de esta regla.
 
 Consecuencia práctica: para cambiar SQLite por Postgres, se escribe un nuevo
-`PostgresProductRepository` que implemente el mismo `Port` — nada en `domain/` ni
+`PostgresProductRepository` que implemente el mismo `Port`; nada en `domain/` ni
 `application/` cambia. Igual si mañana el pipeline usa OpenAI en vez de Gemini: eso vive
 enteramente fuera de la API (es el pipeline offline), así que ni siquiera toca este
 código.
 
-## 3. Puertos (interfaces) — contratos que cruzan la frontera hexagonal
+## 3. Puertos (interfaces): contratos que cruzan la frontera hexagonal
 
 ```python
 # application/ports/product_repository.py
@@ -126,12 +126,12 @@ Redis está arriba o no.
 
 | Dependencia | Falla como... | Estrategia |
 |---|---|---|
-| **SQLite** (fuente de verdad) | Archivo lockeado, I/O error, corrupción | No hay fallback razonable: es la única fuente de datos. Se captura la excepción en el adapter, se traduce a `RepositoryUnavailableError` (dominio) y el error handler HTTP devuelve `503` con mensaje descriptivo. Se documenta que en el ecosistema real esto sería una DB gestionada con réplicas, no un archivo local — punto único de falla aceptado explícitamente para el prototipo. |
-| **Redis** (cache) | Timeout de conexión, Redis caído | **Nunca debe tumbar la API.** El adapter `redis_cache.py` envuelve cada llamada en try/except sobre errores de conexión; ante fallo, loguea (warning) y se comporta como cache-miss — el use case sigue a SQLite normalmente. Además, un **circuit breaker liviano (pybreaker)** sobre el cliente Redis evita reintentar contra un Redis caído en cada request (lo que sumaría latencia de timeout a *cada* respuesta): tras N fallos consecutivos, el breaker abre y la API deja de intentar Redis por una ventana de cooldown, sirviendo directo desde SQLite hasta que el breaker prueba de nuevo (half-open). |
+| **SQLite** (fuente de verdad) | Archivo lockeado, I/O error, corrupción | No hay fallback razonable: es la única fuente de datos. Se captura la excepción en el adapter, se traduce a `RepositoryUnavailableError` (dominio) y el error handler HTTP devuelve `503` con mensaje descriptivo. Se documenta que en el ecosistema real esto sería una DB gestionada con réplicas, no un archivo local (punto único de falla aceptado explícitamente para el prototipo). |
+| **Redis** (cache) | Timeout de conexión, Redis caído | **Nunca debe tumbar la API.** El adapter `redis_cache.py` envuelve cada llamada en try/except sobre errores de conexión; ante fallo, loguea (warning) y se comporta como cache-miss: el use case sigue a SQLite normalmente. Además, un **circuit breaker liviano (pybreaker)** sobre el cliente Redis evita reintentar contra un Redis caído en cada request (lo que sumaría latencia de timeout a *cada* respuesta): tras N fallos consecutivos, el breaker abre y la API deja de intentar Redis por una ventana de cooldown, sirviendo directo desde SQLite hasta que el breaker prueba de nuevo (half-open). |
 | **Rate limiter** (si usa Redis como backend compartido) | Redis caído | Se degrada a limitador en memoria del proceso (por instancia, no compartido) en vez de fallar. Documentado como limitación conocida del prototipo (en multi-instancia real, se resolvería en el API Gateway, no en el servicio). |
 
 No hay `tenacity` dentro de la API en este diseño (no hay llamadas de red a reintentar:
-SQLite es local y Redis se trata con circuit breaker, no con reintentos — reintentar
+SQLite es local y Redis se trata con circuit breaker, no con reintentos: reintentar
 contra una cache caída no tiene sentido, solo agrega latencia). El pipeline tampoco usa
 `tenacity`: sus dos puntos de reintento (MELI, Gemini) están resueltos con una función
 de backoff exponencial escrita a mano (~10 líneas, `_exponential_backoff_seconds` en el
@@ -139,12 +139,12 @@ notebook). Se evaluó y se descartó agregar `tenacity` como dependencia para es
 una única política simple (exponencial, sin jitter, tope fijo de intentos) repetida en
 dos lugares, una librería no reduce código real ni riesgo, solo agrega una dependencia
 más al notebook. Quedaría justificada si la política creciera en complejidad (jitter,
-reintentos condicionales por tipo de excepción, límites por servicio) — no es el caso
+reintentos condicionales por tipo de excepción, límites por servicio); no es el caso
 de este alcance. `pybreaker` sí se adopta como dependencia porque un circuit breaker
 correcto (con sus tres estados y transiciones) no es razonable de reimplementar a mano
 sin introducir el mismo riesgo que se busca evitar.
 
-**Nota sobre validación de `limit`/`offset`:** estos parámetros se validan dos veces —
+**Nota sobre validación de `limit`/`offset`:** estos parámetros se validan dos veces,
 en el router (`Query(ge=1, le=100)`, `Query(ge=0)`, vía FastAPI/Pydantic) y de nuevo
 dentro de `ListProducts.execute` (`InvalidFilterError`). No es duplicación accidental:
 la validación en el router es la que efectivamente corta la request con `422` antes de
@@ -154,7 +154,7 @@ que no pase por el router HTTP y por lo tanto no por Pydantic. Es exactamente lo
 la arquitectura hexagonal pide: el dominio no delega sus propias reglas en un detalle
 de un adapter de entrada.
 
-## 5. Cache con Redis — qué se cachea y cómo
+## 5. Cache con Redis: qué se cachea y cómo
 
 - **Patrón:** cache-aside, tanto en `GET /products/{id}` como en `GET /products` (listados).
 - **Claves:**
@@ -174,7 +174,7 @@ de un adapter de entrada.
 **Implementado en el prototipo:**
 - **Logging estructurado** (JSON a stdout, `observability/logging.py`): un log por
   request (`RequestObservabilityMiddleware`) con `request_id`, método, path (el patrón
-  de ruta, ej. `/products/{item_id}`, no la URL concreta -- evita cardinalidad
+  de ruta, ej. `/products/{item_id}`, no la URL concreta, evita cardinalidad
   explosiva), status y latencia en ms. El access log propio de uvicorn se desactiva
   explícitamente (`logging.getLogger("uvicorn.access")`) porque duplicaría lo mismo en
   texto plano con menos contexto. Nivel WARNING cuando el circuit breaker de Redis
@@ -184,11 +184,11 @@ de un adapter de entrada.
   `error_handlers.py`), porque ahí sí no hay fallback y la respuesta es un `503`.
 - **Métricas Prometheus** (`prometheus-client` + `GET /metrics`, registro propio en
   `observability/metrics.py` para no pisar el registro global default):
-  - `http_request_duration_seconds{method,path,status_code}` -- histograma de latencia.
-  - `http_request_errors_total{method,path,status_code}` -- contador de respuestas ≥400.
-  - `cache_operations_total{operation=detail|list,result=hit|miss}` -- para el cache hit
+  - `http_request_duration_seconds{method,path,status_code}`: histograma de latencia.
+  - `http_request_errors_total{method,path,status_code}`: contador de respuestas ≥400.
+  - `cache_operations_total{operation=detail|list,result=hit|miss}`: para el cache hit
     ratio (`hit / (hit+miss)`).
-  - `circuit_breaker_state{name="redis"}` -- gauge (0=closed, 1=open, 2=half-open),
+  - `circuit_breaker_state{name="redis"}`: gauge (0=closed, 1=open, 2=half-open),
     actualizado vía listener de `pybreaker` en cada transición de estado.
 - **Health check** (`GET /health`): verifica conectividad a SQLite y a Redis por separado,
   devuelve `200` (`status: ok`) si ambos están bien, `200` con `status: degraded` si
@@ -212,13 +212,13 @@ un entorno real tipo MELI):
 
 | Decisión | Prototipo | Qué se haría a escala real de MELI |
 |---|---|---|
-| **Paginación** | `limit`/`offset` (simple, suficiente para SQLite chico) | Paginación por keyset/cursor (`WHERE item_id > last_seen`) — offset no escala en tablas de millones de filas (el `OFFSET N` obliga a escanear N filas). |
+| **Paginación** | `limit`/`offset` (simple, suficiente para SQLite chico) | Paginación por keyset/cursor (`WHERE item_id > last_seen`); offset no escala en tablas de millones de filas (el `OFFSET N` obliga a escanear N filas). |
 | **Rate limiting** | Implementado con `slowapi`, límite por IP, en memoria/proceso | En el gateway/API Manager central de MELI (no en cada servicio), con cuotas por cliente/API-key y `429` estandarizado. |
-| **Async I/O** | Endpoints definidos como `def` (síncronos), no `async def`: Starlette los ejecuta automáticamente en un threadpool, así que las llamadas bloqueantes a SQLite no frenan el event loop sin escribir código adicional. No se fuerza `async def` porque no habría nada real que ganar -- el driver de SQLite es síncrono igual, y declarar el endpoint `async` sin un driver async por debajo solo movería el bloqueo al mismo lugar. | Driver async nativo contra una DB real (ej. `asyncpg`), recién ahí declarando los endpoints `async def`; o el patrón CQRS con un read-store optimizado para consultas de alto volumen. |
+| **Async I/O** | Endpoints definidos como `def` (síncronos), no `async def`: Starlette los ejecuta automáticamente en un threadpool, así que las llamadas bloqueantes a SQLite no frenan el event loop sin escribir código adicional. No se fuerza `async def` porque no habría nada real que ganar: el driver de SQLite es síncrono igual, y declarar el endpoint `async` sin un driver async por debajo solo movería el bloqueo al mismo lugar. | Driver async nativo contra una DB real (ej. `asyncpg`), recién ahí declarando los endpoints `async def`; o el patrón CQRS con un read-store optimizado para consultas de alto volumen. |
 | **Particionamiento** | No aplica (un archivo SQLite) | Particionar por `site_id` (MLA, MLB, ...) o por categoría, dado el volumen (2M+ productos a nivel MELI); posible sharding horizontal de la DB de lectura. |
-| **Horizontal scaling** | Un solo proceso Uvicorn | Múltiples réplicas *stateless* detrás de un load balancer; el estado (cache, rate limit) vive en Redis compartido, no en memoria de proceso — por eso el diseño ya evita estado local en la app. |
+| **Horizontal scaling** | Un solo proceso Uvicorn | Múltiples réplicas *stateless* detrás de un load balancer; el estado (cache, rate limit) vive en Redis compartido, no en memoria de proceso; por eso el diseño ya evita estado local en la app. |
 | **Auth** | Sin auth (prototipo abierto) | API key u OAuth2 `client_credentials` gestionado centralmente, coherente con que la API sería consumida por "entidades externas" (otros equipos/sistemas de recomendación). |
-| **Empaquetado/deploy** | `docker-compose.yml` con dos servicios (`api`, `redis`) para correr localmente sin instalar dependencias en el host -- ver README, sección "Correr con Docker" | Imagen de la API en un registry versionado, desplegada en el orquestador de contenedores de MELI (réplicas, health checks, rollout), con Redis como servicio gestionado en vez de un contenedor local. |
+| **Empaquetado/deploy** | `docker-compose.yml` con dos servicios (`api`, `redis`) para correr localmente sin instalar dependencias en el host (ver README, sección "Correr con Docker") | Imagen de la API en un registry versionado, desplegada en el orquestador de contenedores de MELI (réplicas, health checks, rollout), con Redis como servicio gestionado en vez de un contenedor local. |
 
 ## 8. Endpoints propuestos
 
@@ -255,7 +255,7 @@ documentados:
 
 1. **`redis-py` reintenta por su cuenta.** Desde la v5, el cliente trae por default
    un `Retry(ExponentialWithJitterBackoff(), retries=10)` para `ConnectionError`/
-   `TimeoutError` -- es decir, *cada* llamada (`get`/`set`) podía reintentar hasta 10
+   `TimeoutError`, es decir, *cada* llamada (`get`/`set`) podía reintentar hasta 10
    veces internamente antes de devolver el control a nuestro código. Esto duplica
    silenciosamente la política de reintentos que ya habíamos decidido delegar
    enteramente al circuit breaker (sección 4), e inflaba la latencia de una sola
@@ -268,7 +268,7 @@ documentados:
 
 Con ambos ajustes, cada llamada fallida respeta el timeout configurado (~1s por
 default) y el circuit breaker abre de forma predecible tras `redis_breaker_fail_max`
-fallos consecutivos -- verificado con un servidor `uvicorn` real, no solo con tests.
+fallos consecutivos, verificado con un servidor `uvicorn` real, no solo con tests.
 
 También vale notar que el patrón cache-aside implica **dos** llamadas al cache por
 request en el peor caso (un `get` que falla + un `set` que también falla), por lo
@@ -289,7 +289,7 @@ commits los hace el usuario manualmente (no se commitea desde el agente).
 7. Rate limiting (slowapi) + revisión final / README de la API.
 
 Rate limiting: `slowapi`, por IP (`get_remote_address`), `MELI_API_RATE_LIMIT_PER_MINUTE`
-(default 60/min) aplicado solo a `/products` y `/products/{item_id}` -- `/health` y
+(default 60/min) aplicado solo a `/products` y `/products/{item_id}`; `/health` y
 `/metrics` quedan exentos a propósito, porque el propio monitoreo necesita poder
 consultarlos siempre, incluso bajo carga. Excedido el límite, responde `429` con el
 mismo formato de error que el resto de la API (`RATE_LIMIT_EXCEEDED`). Probado con un
@@ -302,14 +302,14 @@ Tres diagramas, cada uno respondiendo una pregunta distinta que los puntos 1-9 d
 documento ya responden en prosa; se agregan en Mermaid porque GitHub los renderiza
 nativamente en el propio `.md`, sin depender de una imagen externa que se desactualice.
 
-### 11.1 Diagrama de componentes -- capas y dirección de dependencia
+### 11.1 Diagrama de componentes: capas y dirección de dependencia
 
 Versión diagramada del ASCII de la sección 2: qué depende de qué, y por qué un cambio
 de adapter (SQLite -> Postgres, Redis -> Memcached) no toca `domain/` ni `application/`.
 
 ```mermaid
 graph TD
-    subgraph inbound["Adapters -- inbound"]
+    subgraph inbound["Adapters (inbound)"]
         HTTP["FastAPI routers<br/>products.py / health.py / metrics.py"]
     end
 
@@ -324,7 +324,7 @@ graph TD
         Exc["DomainError y subclases"]
     end
 
-    subgraph outbound["Adapters -- outbound"]
+    subgraph outbound["Adapters (outbound)"]
         Cached["CachedProductRepository"]
         Sqlite["SqliteProductRepository"]
         Redis["RedisCache (+ pybreaker)"]
@@ -348,12 +348,12 @@ graph TD
 ```
 
 `CachedProductRepository` además compone con el puerto `Cache` y envuelve otra
-instancia de `ProductRepository` (patrón decorator) -- esa relación no se
+instancia de `ProductRepository` (patrón decorator); esa relación no se
 dibuja acá para no cruzar flechas entre capas; está representada en el
 diagrama de secuencia (11.2) y en el de clases (11.3), que son los que
 corresponden para mostrar composición en vez de capas.
 
-### 11.2 Diagrama de secuencia -- `GET /products/{item_id}`
+### 11.2 Diagrama de secuencia: `GET /products/{item_id}`
 
 Cubre el camino feliz (cache hit y cache miss) y el caso en que Redis está caído con el
 circuit breaker abierto, para dejar visible que ninguno de los dos escenarios de falla
@@ -400,7 +400,7 @@ sequenceDiagram
     MW-->>C: respuesta + header X-Request-ID
 ```
 
-### 11.3 Diagrama de clases -- dominio y puertos
+### 11.3 Diagrama de clases: dominio y puertos
 
 El núcleo que no depende de FastAPI, SQLite ni Redis: si mañana cambia cualquiera de
 esos tres, este diagrama no cambia.
