@@ -48,7 +48,17 @@ Al terminar, el notebook deja dos artefactos:
   `enrichment_status` (`pending` / `enriched` / `skipped` / `error`).
 - `enriched_products_export.json`: snapshot desnormalizado del mismo contenido.
 
-La API lee directamente de `meli_products.db`.
+La API lee directamente de `meli_products.db`. Después de correr el notebook,
+descargá ese archivo desde el panel de archivos de Colab (ícono de carpeta a la
+izquierda) y copialo a la raíz de este repo antes de levantar la API, ya sea
+local o con Docker Compose.
+
+Este paso manual (descargar el archivo de Colab y copiarlo a la raíz del repo)
+es solo por las condiciones de este challenge. En un entorno de producción real
+la base no sería un archivo SQLite local: sería una base de datos gestionada en
+la nube (por ejemplo Postgres), para que el pipeline escriba y la API lea
+directamente sobre la misma fuente, sin depender de mover un archivo entre
+procesos (ver [`docs/informe.md`](docs/informe.md), sección 2.1).
 
 ## API: instalación y ejecución
 
