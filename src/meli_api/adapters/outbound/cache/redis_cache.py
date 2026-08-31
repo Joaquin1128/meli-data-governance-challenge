@@ -53,7 +53,7 @@ class RedisCache:
             socket_connect_timeout=socket_timeout_seconds,
             socket_timeout=socket_timeout_seconds,
             # redis-py por default reintenta 10 veces con backoff exponencial+jitter
-            # ante ConnectionError/TimeoutError -- eso duplicaría la política de
+            # ante ConnectionError/TimeoutError; eso duplicaría la política de
             # reintentos que ya decidimos manejar nosotros vía el circuit breaker,
             # y haría que cada request pague hasta 10x el timeout de conexión
             # mientras Redis está caído. Se desactiva explícitamente acá.

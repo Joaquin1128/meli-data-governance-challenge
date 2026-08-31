@@ -2,7 +2,7 @@ from typing import Protocol
 
 
 class Cache(Protocol):
-    """Puerto de cache, deliberadamente 'tonto' (strings ya serializados).
+    """Puerto de cache con una interfaz minimalista (strings ya serializados).
 
     Así el use case nunca necesita saber si el adapter detrás es Redis, un
     `NullCache` no-op (Redis no configurado) o cualquier otra cosa: un miss se ve

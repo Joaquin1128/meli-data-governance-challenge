@@ -61,9 +61,12 @@ enunciado dice que se evalúa por encima del código en sí.
   adornar o cambiar la sustancia de la información original sin razón justificada".
   El prompt (`DescriptionEnricher._build_prompt`) traduce eso en restricciones
   concretas y verificables: no inventar atributos fuera de las especificaciones,
-  tono neutral-profesional, límite duro de 400 caracteres, sin markdown. Esto es lo
-  que hace que la integridad de los datos (pilar 2) sea algo exigible, no una
-  declaración de intención.
+  tono neutral-profesional, límite duro de 400 caracteres, sin markdown. El prompt
+  también fija el propósito explícito de la descripción ("for clarity and
+  engagement, to be consumed by a recommendation system"), no solo las
+  restricciones de qué no hacer, cumpliendo el pedido del enunciado de clarificar
+  el propósito hacia el LLM. Esto es lo que hace que la integridad de los datos
+  (pilar 2) sea algo exigible, no una declaración de intención.
 - **Resiliencia ante servicios externos.** Tanto el cliente de MELI como el de
   Gemini reintentan con backoff exponencial ante `429`/`5xx` y errores transitorios
   respectivamente (secciones 5 y 7 del notebook). Esto vive enteramente en el

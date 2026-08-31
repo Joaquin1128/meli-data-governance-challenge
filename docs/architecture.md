@@ -118,7 +118,7 @@ class Cache(Protocol):
     def invalidate(self, key: str) -> None: ...
 ```
 
-`Cache` es deliberadamente "tonto" (get/set de strings serializados) para que la
+`Cache` mantiene una interfaz minimalista (get/set de strings serializados) para que la
 implementación `NullCache` (no-op) sea trivial y el use case nunca necesite saber si
 Redis está arriba o no.
 
