@@ -24,7 +24,6 @@
 ```
 meli-data-governance-challenge/
 ├── docs/
-│   ├── Data Governance JD Positions.pdf   # enunciado original (confirmar nombre exacto en el repo)
 │   ├── architecture.md                    # este documento
 │   └── informe.md                         # informe del desafío: decisiones, resultados, impacto
 ├── notebooks/
@@ -234,7 +233,7 @@ un entorno real tipo MELI):
 (`404` producto no encontrado, `422` params de filtro inválidos, `503` SQLite no
 disponible, `429` rate limit excedido).
 
-## 9. Decisiones finales (confirmadas)
+## 9. Decisiones finales
 
 1. **TTL de cache**: 5 min para detalle (`product:{id}`), 1 min para listados
    (`products:list:*`). Configurable por variable de entorno, con estos valores como
@@ -247,7 +246,7 @@ disponible, `429` rate limit excedido).
 4. **Estructura de carpetas y capas**: confirmada tal como está descripta en este
    documento (secciones 2 y 3).
 
-## 9bis. Nota de implementación: latencia real de Redis caído
+## 9.1 Nota de implementación: latencia real de Redis caído
 
 Al probar `RedisCache` contra un Redis inalcanzable con un servidor real (no solo
 `TestClient`), aparecieron dos comportamientos no obvios que vale la pena dejar
@@ -275,10 +274,9 @@ request en el peor caso (un `get` que falla + un `set` que también falla), por 
 que el breaker abre en menos requests HTTP de las que "fail_max" sugeriría a
 primera vista.
 
-## 10. Plan de implementación incremental
+## 10. Orden de construcción
 
-Se implementa en partes chicas; cada parte se avisa cuando está lista para revisar, y los
-commits los hace el usuario manualmente (no se commitea desde el agente).
+El proyecto se construyó en este orden:
 
 1. Estructura base del proyecto + capa de dominio (`domain/`) + puertos (`application/ports/`).
 2. Casos de uso (`application/use_cases/`) sobre los puertos, con tests unitarios (ports mockeados).
@@ -299,7 +297,7 @@ servidor `uvicorn` real: el límite corta en la request número `N+1` como se es
 ## 11. Diagramas UML
 
 Tres diagramas, cada uno respondiendo una pregunta distinta que los puntos 1-9 de este
-documento ya responden en prosa; se agregan en Mermaid porque GitHub los renderiza
+documento ya responden en el texto; se agregan en Mermaid porque GitHub los renderiza
 nativamente en el propio `.md`, sin depender de una imagen externa que se desactualice.
 
 ### 11.1 Diagrama de componentes: capas y dirección de dependencia

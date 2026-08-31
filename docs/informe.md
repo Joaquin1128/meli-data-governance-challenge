@@ -79,14 +79,20 @@ enunciado dice que se evalúa por encima del código en sí.
   complejidad (jitter, reintentos condicionales por tipo de error, etc.), no como
   un requisito de este alcance.
 - **Elección del modelo de Gemini.** Se evaluaron dos variantes: `gemini-flash-lite-latest`
-  y `gemini-flash-latest` (la estándar, no lite). Se optó por la primera por ser la
-  opción de menor costo dentro del alcance de este challenge, consistente con el
-  pilar de eficiencia operativa (pilar 3). Se probó además reforzar el cumplimiento
-  del límite de longitud del prompt (400 caracteres) con un reintento a nivel de
-  código cuando la descripción lo superaba, pero se revirtió: triplicaba las
-  llamadas a Gemini por producto en los casos afectados, un costo peor que el
-  problema que buscaba resolver (una descripción algo más larga es preferible a
-  gastar cuota reintentando sin garantía de éxito). Queda documentado como
+  y `gemini-flash-latest` (la estándar, no lite). Se notó una mejoría con la
+  estándar, pero determinar si esa mejora justifica el costo adicional
+  requeriría una evaluación más profunda (calidad, consistencia de longitud,
+  distintos tipos de producto) que excede el alcance de este challenge. Por
+  cuestiones de costo, en este challenge se optó por dejar la variante más
+  económica (lite), consistente con el pilar de eficiencia operativa (pilar 3).
+  Se probó además reforzar el cumplimiento del límite de longitud del prompt
+  (400 caracteres) con un reintento a nivel de código cuando la descripción lo
+  superaba, pero se revirtió: la capa gratuita de Gemini AI Studio usada para
+  este challenge tiene un límite de solicitudes por minuto, y triplicar las
+  llamadas a Gemini por producto en los casos afectados agotaba esa cuota y
+  generaba errores `429` en vez de resolver el problema (una descripción algo
+  más larga es preferible a quedarse sin cuota para el resto de la corrida).
+  Queda documentado como
   limitación conocida que `gemini-flash-lite-latest` no respeta el límite de
   longitud del prompt de forma consistente (ver 3.3: entre 33% y 57% de las
   descripciones excedieron los 400 caracteres según la corrida). **En un entorno de
@@ -356,9 +362,11 @@ la sección 2.2:
 
 1. **Probado y revertido (ver 2.1 para el detalle completo).** Se implementó un
    reintento a nivel de código que volvía a pedir la generación si
-   `len(text) > 400`; se revirtió porque triplicaba las llamadas a Gemini por
-   producto en los casos afectados, un costo peor que el problema que buscaba
-   resolver. Con el modelo elegido (`gemini-flash-lite-latest`), el límite de
+   `len(text) > 400`; se revirtió porque la capa gratuita de Gemini AI Studio
+   usada para este challenge tiene un límite de solicitudes por minuto, y
+   triplicar las llamadas a Gemini por producto en los casos afectados agotaba
+   esa cuota y generaba errores `429` en vez de resolver el problema. Con el
+   modelo elegido (`gemini-flash-lite-latest`), el límite de
    longitud del prompt sigue sin cumplirse de forma confiable: hoy se acepta la
    longitud que devuelva el modelo en el primer intento exitoso, sin reintentar
    por eso. La Corrida 3 confirma que el problema no es monótono: el porcentaje de
