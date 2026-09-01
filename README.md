@@ -60,6 +60,14 @@ la nube (por ejemplo Postgres), para que el pipeline escriba y la API lea
 directamente sobre la misma fuente, sin depender de mover un archivo entre
 procesos (ver [`docs/informe.md`](docs/informe.md), sección 2.1).
 
+Si solo querés probar la API sin correr el pipeline (sin necesidad de
+credenciales de Gemini ni de MercadoLibre), el repo incluye una base de
+muestra en [`sample-data/meli_products.sample.db`](sample-data/meli_products.sample.db),
+generada en una corrida real. Son datos de un catálogo real de MercadoLibre
+(búsqueda "notebook gamer") capturados en un momento puntual: precios,
+imágenes o el estado de algún producto pueden no reflejar el catálogo actual,
+pero sirven igual para ejercitar todos los endpoints de la API.
+
 ## API: instalación y ejecución
 
 Requiere Python 3.11+.
@@ -73,8 +81,10 @@ source .venv/bin/activate
 pip install -e .
 pip install -r requirements-api.txt
 
-# meli_products.db generado por el notebook, o el propio (ver más abajo)
+# meli_products.db generado por el notebook, o el de ejemplo en sample-data/
 export MELI_API_DB_PATH=meli_products.db
+# o, para probar sin correr el pipeline:
+# export MELI_API_DB_PATH=sample-data/meli_products.sample.db
 
 uvicorn meli_api.adapters.inbound.http.app:app --reload
 ```
@@ -93,9 +103,12 @@ export MELI_API_CACHE_BACKEND=none
 ### Con Docker Compose
 
 Levanta la API y Redis juntos. Requiere tener `meli_products.db` en la raíz del
-repo (el `docker-compose.yml` lo monta como volumen de solo lectura):
+repo (el `docker-compose.yml` lo monta como volumen de solo lectura). Para
+probar con la base de muestra en vez de correr el pipeline, copiala primero
+con ese nombre a la raíz:
 
 ```bash
+cp sample-data/meli_products.sample.db meli_products.db
 docker compose up --build
 ```
 
@@ -155,6 +168,7 @@ notebooks/    pipeline de extracción y enriquecimiento (Colab)
 src/meli_api/ API RESTful (arquitectura hexagonal: domain / application / adapters)
 tests/        unit / integration / e2e
 docs/         informe.md, architecture.md
+sample-data/  base SQLite de muestra, para probar la API sin correr el pipeline
 ```
 
 Detalle completo de capas, puertos y decisiones de diseño en

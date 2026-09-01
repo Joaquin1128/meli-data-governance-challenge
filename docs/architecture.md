@@ -28,6 +28,8 @@ meli-data-governance-challenge/
 │   └── informe.md                         # informe del desafío: decisiones, resultados, impacto
 ├── notebooks/
 │   └── meli_enrichment_pipeline.ipynb     # pipeline de extracción y enriquecimiento
+├── sample-data/
+│   └── meli_products.sample.db            # base de muestra, para probar la API sin correr el pipeline
 ├── src/
 │   └── meli_api/
 │       ├── domain/                        # capa 1: núcleo, sin dependencias externas

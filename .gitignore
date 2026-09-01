@@ -1,6 +1,7 @@
 # Entornos y credenciales
 .env
 *.db
+!sample-data/meli_products.sample.db
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
